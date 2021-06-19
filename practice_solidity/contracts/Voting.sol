@@ -16,10 +16,10 @@ contract Voting {
 	// 변수
 	candidator[] public candidatorList; // 구 조체 배열
 	bool live;  // 투표 진행 여부
-	adress owner;  // 투표 개설자
+	address owner;  // 투표 개설자
 	
 	// 매핑
-	mapping(adress => bool) Votes;  // 투표한 사람에 대한 매핑
+	mapping(address => bool) Votes;  // 투표한 사람에 대한 매핑
 	
 	// 확장자 (권한자)
 	modifier onlyOwner {
@@ -29,9 +29,9 @@ contract Voting {
 	
 	// 이벤트
 	event AddCandidator(string name);  // 후보자 이름을 받아 누가 추가되었는지 확인
-	event UpVotes(string candidator, uint votes) // 어떤 후보자가 몇표 받았는지 확인
-	event FinishVote(bool live)  // 투표가 끝남을 확인
-	event StartVote(adress owner) // 투표가 시작을 확인
+	event UpVotes(string candidator, uint votes); // 어떤 후보자가 몇표 받았는지 확인
+	event FinishVote(bool live);  // 투표가 끝남을 확인
+	event StartVote(address owner); // 투표가 시작을 확인
 	
 	// 생성자(최초 컨트랙트 발생시 동작)
 	constructor() public {
