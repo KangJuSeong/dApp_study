@@ -1,0 +1,23 @@
+// 배포
+truffle migrate --network 사용할 네트워크 이름 --reset
+
+// 콘솔
+truffle console --network 사용할 네트워크 이름 
+
+// web3 api 사용
+web3.eth.accounts // 계정 10개
+web3 // 지원하는 함수 모듈 확인
+
+// 컨트랙트 사용
+var 변수 = 컨트랙트명.at("컨트랙트 주소") // 작성한 컨트랙트 주소를 넣고 변수로 사용
+변수.메서드() // 컨트랙트에 작성한 메서드들을 사용
+
+// 스토리지 바로 읽기
+web3.eth.getStorageAt("컨트랙트 주소") // 계정 state에 있는 저장소 가져오기
+web3._extend.utils.toAscii(위 코드로 출력된 값) // 해당 변수에 있는 값을 확인할 수 있음
+
+// 가스 확인 (정해진 가스보다 많이 소모되는 트랜잭션이 발생 시 오류 발생)
+변수.메서드.estimateGas("값") // 값을 넣고 메서드가 실행되었을 때 어느정도 가스가 소모되는지 확인
+
+// 가장 최근 블록의 가스 제한 확인
+web3.eth.getBlock("latest").gasLimit
