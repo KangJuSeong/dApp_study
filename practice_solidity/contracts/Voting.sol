@@ -19,7 +19,7 @@ contract Voting {
 	address owner;  // 투표 개설자
 	
 	// 매핑
-	mapping(address => bool) Votes;  // 투표한 사람에 대한 매핑
+	mapping(address => bool) Voted;  // 투표한 사람에 대한 매핑
 	
 	// 확장자 (권한자)
 	modifier onlyOwner {
@@ -42,7 +42,7 @@ contract Voting {
 	}
 	
 	// 후보자 추가 (언더바는 매개변수 관례)
-	fuction addCandidator(string _name) public onlyOwner { 
+	function addCandidator(string _name) public onlyOwner { 
 	
 		// require 조건에 충족해야만 계속 실행 -> 가스를 절약 할 수 있음
 		require(live == true);
@@ -55,10 +55,10 @@ contract Voting {
 	}
 	
 	// 후보자 투표
-	fuction Votes(uint _candidatorIndex) public {
+	function Votes(uint _candidatorIndex) public {
 		require(live == true);
-		require(Voted[msg.sender] == false)  // 투표자(msg.sender)가 투표를 하지 않은 상태이어야 함
-		require(_canidatorIndex < candidatorList.length);  // 존재하지 않는 후보자의 인덱스를 입력하는 경우 제거
+		require(Voted[msg.sender] == false);  // 투표자(msg.sender)가 투표를 하지 않은 상태이어야 함
+		require(_candidatorIndex < candidatorList.length);  // 존재하지 않는 후보자의 인덱스를 입력하는 경우 제거
 		
 		candidatorList[_candidatorIndex].votes ++;  // 투표수 증가
 		
@@ -68,8 +68,8 @@ contract Voting {
 	}
 	
 	// 투표 종료 (투표 종료는 해당 컨트랙트를 만든 사람만 할 수 있도록 하기)
-	fuction finishVote() public onlyOwner {
-		require(live == ture)  // 투표가 진행 되어야지만 종료 가능
+	function finishVote() public onlyOwner {
+		require(live == true);  // 투표가 진행 되어야지만 종료 가능
 		live = false;
 		
 		emit FinishVote(live);
