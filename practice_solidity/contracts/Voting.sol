@@ -87,7 +87,7 @@ contract Voting {
 	// 후보자 인원 확인
 	function getLengthCandidator() public returns(uint) {
 		require(candidatorList.length >= 1);
-		return candidatorList.lenght;
+		return candidatorList.length;
 	}
 
 	// 후보자 이름 확인
