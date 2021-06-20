@@ -85,13 +85,14 @@ contract Voting {
 	}
 
 	// 후보자 인원 확인
-	function getLengthCandidator() public returns(uint) {
+	// constant 를 추가해줘야 리턴값을 로그로 확인 가능
+	function getLengthCandidator() public constant returns(uint) {
 		require(candidatorList.length >= 1);
 		return candidatorList.length;
 	}
 
 	// 후보자 이름 확인
-	function getCandidatorName(uint _index) public returns(string) {
+	function getCandidatorName(uint _index) public constant returns(string) {
 		require(candidatorList.length >= 1);
 		require(candidatorList.length >= _index);
 		return candidatorList[_index].name;
