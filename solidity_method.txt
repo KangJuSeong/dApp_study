@@ -1,0 +1,37 @@
+msg.sender // 메소드 호출자의 계정 주소
+msg.value // 메소드 호출자가 보낸 송금액(wei = 1 x 10^-18 ETH)
+block.number // 트랜잭션이 담긴 블록 번호
+adress(this).balance // 컨트랙트가 가진 잔액(wei)
+
+// user 주소로 송금하기
+adress user
+user.send(10 ether)
+user.transfer(10 ether)
+
+// 자료형
+string 문자열, uint 양수, int 정수, adress 주소, bytes 비트
+
+// 구조체
+struct name {}
+
+// 테이블
+mapping (type1 => type2) name
+
+// 조건 체크 후 함수 실행
+modifier name { 
+	require(조건);
+	_;
+}
+
+// 비활성화(모든 이더를 owner에게 송금후 컨트랙트 종료)
+selfdestruct(owner)
+
+// 이벤트(어떤 값을 화면으로 리턴하고 싶을때)
+event test(stirng name)
+function Test(string name) {
+	// emit -> 이벤트 발생
+	emit test(name);
+}
+
+// fallback 함수 (이름없는 함수, 파라미터, 리턴값을 가질수 없고 컨트랙트에 하나만 존재 가능)
+function () public payable {}

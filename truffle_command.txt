@@ -24,3 +24,9 @@ web3.eth.getBlock("latest").gasLimit
 
 // JS를 이용한 단위테스트(테스트 스크립트 모두 실행시킬때는 파일명 작성 x)
 truffle test 스크립트파일.js
+
+// truffle console 에서 메타마스크 지갑으로 이더 송금 자동 스크립트 실행
+exec ./send.js
+
+// 리액트 앱과 컨트랙트 연결
+npm run link-contracts
