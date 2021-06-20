@@ -76,10 +76,24 @@ contract Voting {
 		emit FinishVote(live);
 	}
 
+	// 재투표 시작
 	function restartVote() public onlyOwner {
 		require(live == false);
 		live = true;
 
 		emit RestartVote(live);
+	}
+
+	// 후보자 인원 확인
+	function getLengthCandidator() public returns(uint) {
+		require(candidatorList.length >= 1);
+		return candidatorList.lenght;
+	}
+
+	// 후보자 이름 확인
+	function getCandidatorName(uint _index) public returns(string) {
+		require(candidatorList.length >= 1);
+		require(candidatorList.length >= _index);
+		return candidatorList[_index];
 	}
 }
