@@ -32,6 +32,7 @@ contract Voting {
 	event UpVotes(string candidator, uint votes); // 어떤 후보자가 몇표 받았는지 확인
 	event FinishVote(bool live);  // 투표가 끝남을 확인
 	event StartVote(address owner); // 투표가 시작을 확인
+	event RestartVote(bool live); // 재투표 시작 확인
 	
 	// 생성자(최초 컨트랙트 발생시 동작)
 	constructor() public {
@@ -73,5 +74,12 @@ contract Voting {
 		live = false;
 		
 		emit FinishVote(live);
+	}
+
+	function restartVote() public onlyOwner {
+		require(live == false);
+		live = true;
+
+		emit RestartVote(live);
 	}
 }
