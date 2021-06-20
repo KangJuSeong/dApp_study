@@ -94,6 +94,6 @@ contract Voting {
 	function getCandidatorName(uint _index) public returns(string) {
 		require(candidatorList.length >= 1);
 		require(candidatorList.length >= _index);
-		return candidatorList[_index];
+		return candidatorList[_index].name;
 	}
 }
