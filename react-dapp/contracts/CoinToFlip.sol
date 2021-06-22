@@ -14,7 +14,7 @@ contract CoinToFlip {
 	uint constant HOUSE_FEE_PERCENT = 5;       // 배팅시 차감 수수료
 	uint constant HOUSE_MIN_FEE = 0.005 ether; // 최소 배팅금액의 수수료
 	
-	adress public owner;       // 컨트랙트 관리 계정 주서
+	address public owner;       // 컨트랙트 관리 계정 주서
 	uint public lockedInBets;  // 상금으로 나가야할 금액 잠금(해당 값이 0보다 크면 게임이 진행중)
 	
 	struct Bet {
@@ -25,14 +25,14 @@ contract CoinToFlip {
 		// 0000 0001 = 뒷면 = 1           
 		// 0000 0011 = 앞 + 뒷 (불가능)     
 		uint8 mask;                   // 베팅한 동전 면
-		adress gambler;               // 플레이어의 계정주소
+		address gambler;               // 플레이어의 계정주소
 	}
 	
-	mapping (adress => Bet) bets;  // 베팅 정보를 담는 장부
+	mapping (address => Bet) bets;  // 베팅 정보를 담는 장부
 	
 	event Reveal(uint reveal);                                     // 던진 동전의 결과 이벤트 (1 or 2)
-	event Payment(adress indexed beneficiary, uint amount);        // 상금 전송 이벤트 
-	event FailedPayment(adress indexed beneficiary, uint amount);  // 상금 전송 실패 이벤트
+	event Payment(address indexed beneficiary, uint amount);        // 상금 전송 이벤트 
+	event FailedPayment(address indexed beneficiary, uint amount);  // 상금 전송 실패 이벤트
 	
 	// 생성자, owner를 컨트랙트 배포 주소로 저장
 	constructor() public {
@@ -46,14 +46,14 @@ contract CoinToFlip {
 	}
 	
 	// 컨트랙트에서 이더를 인출하는 메서드, owner만 호출 가능
-	function withdrawFunds(adress beneficiary, uint withdrawAmount) external onlyOwner {
-		// adress(this).balance 는 컨트랙트가 가진 잔액
-		require(withdrawAmount + lockedInBets <= adress(this).balance, "Large than balance"); 
+	function withdrawFunds(address beneficiary, uint withdrawAmount) external onlyOwner {
+		// address(this).balance 는 컨트랙트가 가진 잔액
+		require(withdrawAmount + lockedInBets <= address(this).balance, "Large than balance"); 
 		sendFunds(beneficiary, withdrawAmount);
 	}
 	
 	// 이더 전송 메서드, 플레이어에게 상금 전송 또는 이더 인출 역할
-	function sendFunds(adress beneficiary, uint amount) private {
+	function sendFunds(address beneficiary, uint amount) private {
 		// send 함수는 이더를 보내는 메서드로 전송이 성공하면 1, 실패하면 0을 리턴
 		if (beneficiary.send(amount)) {
 			emit Payment(beneficiary, amount);
@@ -86,30 +86,30 @@ contract CoinToFlip {
 		// storage를 안써도 되지만 명시해주지 않으면 컴파일 시 경고 발생
 		Bet storage bet = bets[msg.sender];
 		
-		// 베팅 유저의 주소가 null인지 확인 (adress(0) 는 주소 null을 뜻함)
-		require(bet.gambler == adress(0), "Bet should be empty state");
+		// 베팅 유저의 주소가 null인지 확인 (address(0) 는 주소 null을 뜻함)
+		require(bet.gambler == address(0), "Bet should be empty state");
 		
 		// 베팅한 동전 면 계산
 		uint8 numOfBetBit = countBits(betMask);
 		
 		// bet 구조체에 값을 채워넣기
-		bet.amout = amount;
+		bet.amount = amount;
 		bet.numOfBetBit = numOfBetBit;
 		bet.placeBlockNumber = block.number;
 		bet.mask = betMask;
 		bet.gambler = msg.sender;
 		
 		// 유저가 동전을 맞췄을 때 보상으로 가져갈 이더 계산
-		unit possibleWinningAmount = getWinningAmount(amount, numOfBetBit);
+		uint possibleWinningAmount = getWinningAmount(amount, numOfBetBit);
 		// 맞췄을 때 보상으로 가져갈 이더를 lockedInBets에 더해서 해당 이더들을 잠금
 		lockedInBets += possibleWinningAmount;
 		
 		// 현재 컨트랙트에 있는 이더보다 lockedInBets 가 더 크면 상금을 모두 줄 수 없는 경우를 확인 
-		require(lockedInBets < adress(this).balance, "Cannot affortd to pay the bet.");
+		require(lockedInBets < address(this).balance, "Cannot affortd to pay the bet.");
 	}
 	
 	// 베팅한 금액에 대한 상금을 계산하는 메서드, pure는 계정의 상태 정보를 읽거나 쓰지 않을 때 사용(쓰지 않으면 컴파일때 경고 발생)
-	function getWinningAmount(uint amount, unit8 numOfBetBit) private pure returns (uint winningAmount) {
+	function getWinningAmount(uint amount, uint8 numOfBetBit) private pure returns (uint winningAmount) {
 		// 베팅한 동전 면의 값이 1 또는 2인지 확인
 		require(0 < numOfBetBit && numOfBetBit < MAX_CASE, "Probability is out of range");
 		
@@ -128,13 +128,13 @@ contract CoinToFlip {
 	}
 	
 	// 동전 던지기 메서드
-	function revealResult(unint8 seed) external {
+	function revealResult(uint8 seed) external {
 		// 유저의 베팅 정보 가져오기
 		Bet storage bet = bets[msg.sender];
 		uint amount = bet.amount;
 		uint8 numOfBetBit = bet.numOfBetBit;
 		uint placeBlockNumber = bet.placeBlockNumber;
-		adress gambler = bet.gambler;
+		address gambler = bet.gambler;
 		
 		// 베팅 금액이 0보다 커야함
 		require(amount > 0, "Bet should be in an 'active' state");	
@@ -145,7 +145,7 @@ contract CoinToFlip {
 		require(block.number > placeBlockNumber, "revealResult in the same block as placeBet, or before.");
 		
 		// 난수 생성
-		bytes32 random = keccak256(abi.encodePacked(blockhash(block.number-sedd), blockhash(placeBlockNumber)));
+		bytes32 random = keccak256(abi.encodePacked(blockhash(block.number-seed), blockhash(placeBlockNumber)));
 		
 		uint reveal = uint(random) % MAX_CASE; // 동전 던지기 결과, 0(뒤) or 1(앞) 
 		
@@ -174,7 +174,7 @@ contract CoinToFlip {
 	}
 	
 	// 해당 플레이어의 값을 모두 null로 초기화
-	function clearBet(adress player) private {
+	function clearBet(address player) private {
 		Bet storage bet = bets[player];
 		
 		if(bet.amount > 0) {
@@ -185,7 +185,7 @@ contract CoinToFlip {
 		bet.numOfBetBit = 0;
 		bet.placeBlockNumber = 0;
 		bet.mask = 0;
-		bet.gambler = adress(0);
+		bet.gambler = address(0);
 	}
 	
 	// 베팅 후 결과를 확인하지 않고 베팅 취소
@@ -202,7 +202,7 @@ contract CoinToFlip {
 		sendFunds(bet.gambler, amount);
 		
 		uint possibleWinningAmount;
-		possibleWinningAmount = getWinningAmount(amount, numOfBitBet);
+		possibleWinningAmount = getWinningAmount(amount, numOfBetBit);
 		
 		lockedInBets -= possibleWinningAmount;
 		clearBet(msg.sender);
@@ -213,7 +213,7 @@ contract CoinToFlip {
 		return address(this).balance;
 	}
 	
-	// numOfBitBet 계산 메서드
+	// numOfBetBit 계산 메서드
 	function countBits(uint8 _num) internal pure returns(uint8) {
 		uint8 count;
 		while (_num > 0) {
