@@ -17,15 +17,16 @@ class CoinFlip extends Component {
             web3: null,
             accounts: null,
             contract: null,
-            value: 0,
-            checked: 0,
-            houseBalance: 0,
-            show: false,
-            reveal: 0,
-            reward: 0,
+            value: 0,        // 베팅 금액
+            checked: 0,      // 선택한 동전 면
+            houseBalance: 0, // 하우스가 가지고 있는 금액
+            show: false,     // 경고 메시지 출력용
+            reveal: 0,       // 동전의 앞 또는 뒤
+            reward: 0,       // 보상
             txList: []
         }
         this.handleClickCoin = this.handleClickCoin.bind(this);
+        this.handleClickBet = this.handleClickBet.bind(this);
     }
 
     componentDidMount = async () => {
@@ -55,6 +56,27 @@ class CoinFlip extends Component {
             }
         } else {
             this.setState({checked: 0});
+        }
+    }
+
+    async handleClickBet() {
+        const {web3, accounts, contract} = this.state;
+
+        if(!this.state.web3) {
+            console.log("App is not ready");
+            return;
+        }
+
+        if(accounts[0] === undefined) {
+            alert("Please press F5 to connect Dapp");
+            return;
+        }
+
+        if(this.state.value <= 0 || this.state.checked === 0) {
+            this.setState({show: true});
+        } else {
+            await contract.placeBet(this.state.checked, {from: accounts[0], value: web3.utils.toWei(String(this.state.value), "ether")});
+            this.setState({show: false, reveal: 0, reward: 0});
         }
     }
 
@@ -106,6 +128,27 @@ class CoinFlip extends Component {
                                         </Radio>
                                     </InputGroup>
                                 </form>
+                                <form>
+                                    <InputGroup>
+                                        <FormControl type="number" placeholder="베팅할 금액을 입력해주세요." bsSize="lg" onChange={this.handleValChange}/>
+                                    </InputGroup>
+                                </form>
+                                <ButtonToolbar>
+                                    <ButtonGroup justified>
+                                        <Button href="#" bsStyle="primary" bsSize="large" onClick={this.handleClickBet}>
+                                            Bet
+                                        </Button>
+                                        <Button href="#" bsStyle="success" bsSize="large" onClick={this.handleClickFlip}>
+                                            Flip!
+                                        </Button>
+                                        <Button href="#" bsSize="large" onClick={this.handleClickReFund}>
+                                            Cancel
+                                        </Button>
+                                        <Button href="#" bsStyle="info" bsSize="large" onClick={this.handleClickReset}>
+                                            Reset
+                                        </Button>
+                                    </ButtonGroup>
+                                </ButtonToolbar>
                             </Panel.Body>
                         </Panel>
                     </Col>
