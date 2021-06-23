@@ -1,6 +1,7 @@
 import React, { Component } from "react";
 
 import "./App.css";
+import "./css/style.css";
 import logo from "./logo.svg";
 
 class App extends Component {
@@ -11,8 +12,8 @@ class App extends Component {
   render() {
     return (
       <div className="App">
-        <header>
-          <img src={logo} className="App-logo"/>
+        <header className="title">
+          이더리움을 이용한 동전 맞추기
         </header>
       </div>
     );
