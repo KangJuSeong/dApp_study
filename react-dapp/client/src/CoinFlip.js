@@ -23,10 +23,16 @@ class CoinFlip extends Component {
             show: false,     // 경고 메시지 출력용
             reveal: 0,       // 동전의 앞 또는 뒤
             reward: 0,       // 보상
-            txList: []
+            txList: [],
+            balance: 0,
+            contractAddress: null,
+            houseEther: 0,
         }
         this.handleClickCoin = this.handleClickCoin.bind(this);
         this.handleClickBet = this.handleClickBet.bind(this);
+        this.handleClickFlip = this.handleClickFlip.bind(this);
+        this.handleClickReset = this.handleClickReset.bind(this);
+        this.handleValChange = this.handleValChange.bind(this);
     }
 
     componentDidMount = async () => {
@@ -37,10 +43,19 @@ class CoinFlip extends Component {
             const Contract = truffleContract(CoinToFlip);
             Contract.setProvider(web3.currentProvider);
             const instance = await Contract.deployed();
-
+            
+            // 컨트랙트에서 발생하는 이벤트를 watch를 통해 계속 확인
             await instance.Reveal().watch((error, result) => this.watchEvent(error, result));
             await instance.Payment().watch((error, result) => this.watchPaymentEvent(error, result));
+
             this.setState({web3, accounts, contract: instance});
+            await web3.eth.getBalance(String(accounts[0])).then((balance) => {
+                this.setState({balance: balance * 0.000000000000000001});
+            });
+            await web3.eth.getBalance(String(instance.address)).then((balance) => {
+                this.setState({houseEther: balance * 0.000000000000000001})
+            })
+            this.setState({contractAddress: instance.address});
         } catch (error) {
             alert("Failed to load web3, accounts, or contract. Check console for details.");
             console.log(error);
@@ -57,7 +72,7 @@ class CoinFlip extends Component {
         } else {
             this.setState({checked: 0});
         }
-    }
+    };
 
     async handleClickBet() {
         const {web3, accounts, contract} = this.state;
@@ -78,7 +93,89 @@ class CoinFlip extends Component {
             await contract.placeBet(this.state.checked, {from: accounts[0], value: web3.utils.toWei(String(this.state.value), "ether")});
             this.setState({show: false, reveal: 0, reward: 0});
         }
+    };
+
+    async handleClickFlip() {
+        const {accounts, contract} = this.state;
+
+        if(!this.state.web3) {
+            console.log("App is not ready");
+            return;
+        }
+
+        if(accounts[0] === undefined) {
+            alert("Please press F5 to connect Dapp");
+            return;
+        }
+
+        let seed = Math.floor((Math.random() * 255) + 1);
+        await contract.revealResult(seed, {from:accounts[0]});
+    };
+
+    handleValChange(e) {
+        this.setState({value: e.target.value});
     }
+
+    handleClickReset() {
+        this.setState({reveal: 0})
+        return;
+    };
+
+    watchEvent = (error, result) => {
+        if(!error) {
+            const {web3} = this.state;
+            this.setState({reveal: web3.utils.toDecimal(result.args.reveal), txList: []}, this.getRecepiptList);
+        } else {
+            console.log(error);
+        }
+    };
+
+    watchPaymentEvent = (error, result) => {
+        if(!error) {
+            const {web3} = this.state;
+            let r= web3.utils.fromWei(web3.utils.toBN(result.args.amount).toString(), 'ether');
+            if(r > 0) {
+                this.setState({reward: r});
+            }
+        }
+    };
+
+    resetTxList = () => {
+        this.setState({txList: []}, this.getRecepiptList);
+    };
+
+    getRecepiptList = async () => {
+        const {web3, accounts, contract} = this.state;
+        const lowerLimit = 50;
+
+        let result = [];
+
+        let blockNumber = await web3.eth.getBlockNumber();
+        console.log("Block Number" + blockNumber);
+
+        let upperBlockNumber = blockNumber;
+        let lowerBlockNumber = (parseInt(upperBlockNumber, 10)-lowerLimit < 0) ? 0 : upperBlockNumber-lowerLimit;
+        
+        for(let i=upperBlockNumber; i>lowerBlockNumber; i--) {
+            let block = await web3.eth.getBlock(i, false);
+            if(block.transactions.length > 0) {
+                block.transactions.forEach(async function(txHash) {
+                    let tx = await web3.eth.getTransaction(txHash.toString());
+                    if(tx != null && tx.from === accounts[0] && tx.to.toLowerCase() === contract.address.toLowerCase()) {
+                        await web3.eth.getTransactionReceipt(tx.hash, function(e, r) {
+                            if(r.logs.length === 2) {
+                                result.push({"txhash": r.transactionHash,
+                                    "value": web3.utils.fromWei(web3.utils.toBN(r.logs[1].data).toStirng(), "ether")});
+                            } else if(r.logs.length === 1) {
+                                result.push({"txhash": r.transactionHash, "value": 0});
+                            }
+                        })
+                    }
+                })
+            }
+        }
+        this.setState({txList: result.splice(0, 5)});
+    };
 
     render() {
         let coin_h = "/images/coin-h.png";
@@ -97,7 +194,7 @@ class CoinFlip extends Component {
                         <Panel bsStyle="info">
                             <Panel.Heading>
                                 <Panel.Title>
-                                    <Glyphicon glyph="thumbs-up"/> House: 0 ETH
+                                    <Glyphicon glyph="thumbs-up"/> House: {this.state.houseEther} ETH <br/> Adress: {this.state.contractAddress}
                                 </Panel.Title>
                             </Panel.Heading>
                             <Panel.Body className="custom-align-center">
@@ -106,7 +203,7 @@ class CoinFlip extends Component {
                         </Panel>
                     </Col>
                     <Col md={5}>
-                        2
+                        <Reveal reveal={this.state.reveal} reward={this.state.reward} />
                     </Col>
                 </Row>
                 <Row className="show-grid">
@@ -114,11 +211,13 @@ class CoinFlip extends Component {
                         <Panel bsStyle="info">
                             <Panel.Heading>
                                 <Panel.Title>
-                                    <Glyphicon glyph="ok-circle" /> Your Bet!
+                                    <Glyphicon glyph="ok-circle" /> 베팅하기
                                 </Panel.Title>
                             </Panel.Heading>
                             <Panel.Body className="custom-align-center">
                                 <form>
+                                    지갑 주소 : {this.state.accounts} <br/>
+                                    잔액 : {this.state.balance} ETH
                                     <InputGroup style={{paddingBottom: '10px'}}>
                                         <Radio name="coinRadioGroup" checked={this.state.checked === 2} inline disabled>
                                             Heads
@@ -130,7 +229,7 @@ class CoinFlip extends Component {
                                 </form>
                                 <form>
                                     <InputGroup>
-                                        <FormControl type="number" placeholder="베팅할 금액을 입력해주세요." bsSize="lg" onChange={this.handleValChange}/>
+                                        <FormControl type="number" placeholder="베팅할 금액을 입력해주세요." bsSize="lg" onChange={e => this.handleValChange(e)}/>
                                     </InputGroup>
                                 </form>
                                 <ButtonToolbar>
@@ -141,7 +240,7 @@ class CoinFlip extends Component {
                                         <Button href="#" bsStyle="success" bsSize="large" onClick={this.handleClickFlip}>
                                             Flip!
                                         </Button>
-                                        <Button href="#" bsSize="large" onClick={this.handleClickReFund}>
+                                        <Button href="#" bsSize="large">
                                             Cancel
                                         </Button>
                                         <Button href="#" bsStyle="info" bsSize="large" onClick={this.handleClickReset}>
@@ -153,12 +252,50 @@ class CoinFlip extends Component {
                         </Panel>
                     </Col>
                     <Col md={5}>
-                        4
+                        <TxList result={this.state.txList}/>
                     </Col>
                 </Row>
             </Grid>
         )
     }
+}
+
+function Reveal(props) {
+    let coinImg = "/images/coin-unknown.png";
+    if(props.reveal === 2) {
+        coinImg = "/images/coin-h.png";
+    } else if(props.reveal === 1) {
+        coinImg = "/images/coin-t.png";
+    }
+
+    let coin = <Image src={coinImg} className="img-coin"/>
+
+    return (
+        <Panel bsStyle="info">
+            <Panel.Heading>
+                <Panel.Title>
+                    <Glyphicon glyph="adjust" /> 동전 결과
+                </Panel.Title>
+            </Panel.Heading>
+            <Panel.Body className="custom-align-center">
+                {coin}
+                {props.reward} ETH
+            </Panel.Body>
+        </Panel>
+    );
+}
+
+function TxList(props) {
+    let result = props.result;
+    let txList = result.map(
+        e => (<ListGroupItem key={e.txhash} bsStyle={e.value>0?"success":"danger"}>{e.txhash} (<b>{e.value}</b> ETH)</ListGroupItem>)
+    );
+
+    return(
+        <ListGroup>
+            {txList}
+        </ListGroup>
+    );
 }
 
 export default CoinFlip;

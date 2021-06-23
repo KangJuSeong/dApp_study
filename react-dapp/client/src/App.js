@@ -2,7 +2,6 @@ import React, { Component } from "react";
 
 import "./App.css";
 import "./css/style.css";
-import logo from "./logo.svg";
 
 class App extends Component {
   // constructor(props) {
