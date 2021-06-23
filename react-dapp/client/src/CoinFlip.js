@@ -20,19 +20,13 @@ class CoinFlip extends Component {
             value: 0,        // 베팅 금액
             checked: 0,      // 선택한 동전 면
             houseBalance: 0, // 하우스가 가지고 있는 금액
-            show: false,     // 경고 메시지 출력용
+            show: {flag: false, msg: ""},     // 경고 메시지 출력용
             reveal: 0,       // 동전의 앞 또는 뒤
             reward: 0,       // 보상
             txList: [],
             balance: 0,
             contractAddress: null,
-            houseEther: 0,
         }
-        this.handleClickCoin = this.handleClickCoin.bind(this);
-        this.handleClickBet = this.handleClickBet.bind(this);
-        this.handleClickFlip = this.handleClickFlip.bind(this);
-        this.handleClickReset = this.handleClickReset.bind(this);
-        this.handleValChange = this.handleValChange.bind(this);
     }
 
     componentDidMount = async () => {
@@ -47,13 +41,14 @@ class CoinFlip extends Component {
             // 컨트랙트에서 발생하는 이벤트를 watch를 통해 계속 확인
             await instance.Reveal().watch((error, result) => this.watchEvent(error, result));
             await instance.Payment().watch((error, result) => this.watchPaymentEvent(error, result));
-
+			await instance.CheckHouseFund().watch((error, result) => this.watchHouseFundEvent(error, result));
+			
             this.setState({web3, accounts, contract: instance});
             await web3.eth.getBalance(String(accounts[0])).then((balance) => {
                 this.setState({balance: balance * 0.000000000000000001});
             });
             await web3.eth.getBalance(String(instance.address)).then((balance) => {
-                this.setState({houseEther: balance * 0.000000000000000001})
+                this.setState({houseBalance: balance * 0.000000000000000001})
             })
             this.setState({contractAddress: instance.address});
         } catch (error) {
@@ -62,7 +57,7 @@ class CoinFlip extends Component {
         }
     }
 
-    handleClickCoin(e) {
+    handleClickCoin = (e) => {
         if(this.state.checked === 0) {
             if (e.target.id === "Heads") {
                 this.setState({checked: 2});
@@ -74,7 +69,7 @@ class CoinFlip extends Component {
         }
     };
 
-    async handleClickBet() {
+    handleClickBet = async () => {
         const {web3, accounts, contract} = this.state;
 
         if(!this.state.web3) {
@@ -86,16 +81,20 @@ class CoinFlip extends Component {
             alert("Please press F5 to connect Dapp");
             return;
         }
-
-        if(this.state.value <= 0 || this.state.checked === 0) {
-            this.setState({show: true});
-        } else {
-            await contract.placeBet(this.state.checked, {from: accounts[0], value: web3.utils.toWei(String(this.state.value), "ether")});
-            this.setState({show: false, reveal: 0, reward: 0});
-        }
+		try {
+			if(this.state.value <= 0 || this.state.checked === 0) {
+            	this.setState({show: {flag: true, msg: "You should bet bigger than 0.01 ETH"}});
+        	} else {
+            	await contract.placeBet(this.state.checked, {from: accounts[0], value: web3.utils.toWei(String(this.state.value), "ether")});
+            	this.setState({show: {flag: false, msg: ""}, reveal: 0, reward: 0});
+				alert("베팅이 완료되었습니다. 이제 동전을 던져주세요!")
+        	}	
+		} catch (error) {
+			console.log(error.message);
+		}
     };
 
-    async handleClickFlip() {
+    handleClickFlip = async () => {
         const {accounts, contract} = this.state;
 
         if(!this.state.web3) {
@@ -109,22 +108,27 @@ class CoinFlip extends Component {
         }
 
         let seed = Math.floor((Math.random() * 255) + 1);
-        await contract.revealResult(seed, {from:accounts[0]});
+		try {
+			await contract.revealResult(seed, {from:accounts[0]});
+			alert("동전을 던졌습니다. 결과를 확인해주세요.");
+		} catch (error) {
+			console.log(error.message);
+		}
     };
 
-    handleValChange(e) {
+    handleValChange = (e) => {
         this.setState({value: e.target.value});
     }
 
-    handleClickReset() {
-        this.setState({reveal: 0})
-        return;
+    handleClickReset = () => {
+        this.setState({reveal: 0, value: 0, checked: 0, reward: 0});
+		alert("다시 시작합니다");
     };
 
     watchEvent = (error, result) => {
         if(!error) {
             const {web3} = this.state;
-            this.setState({reveal: web3.utils.toDecimal(result.args.reveal), txList: []}, this.getRecepiptList);
+            this.setState({reveal: web3.utils.toDecimal(result.args.reveal)});
         } else {
             console.log(error);
         }
@@ -133,49 +137,59 @@ class CoinFlip extends Component {
     watchPaymentEvent = (error, result) => {
         if(!error) {
             const {web3} = this.state;
-            let r= web3.utils.fromWei(web3.utils.toBN(result.args.amount).toString(), 'ether');
+            let r = web3.utils.fromWei(web3.utils.toBN(result.args.amount).toString(), 'ether');
             if(r > 0) {
                 this.setState({reward: r});
+				alert("성공! 보상금을 확인하세요");
             }
         }
     };
 
-    resetTxList = () => {
-        this.setState({txList: []}, this.getRecepiptList);
-    };
+	watchHouseFund = (error, result) => {
+		if(!error) {
+			const {web3} = this.state;
+			this.setState({houseBalance: result.args.balance});
+		} else {
+			console.log(error);
+		}
+	}
 
-    getRecepiptList = async () => {
-        const {web3, accounts, contract} = this.state;
-        const lowerLimit = 50;
+    // resetTxList = () => {
+    //     this.setState({txList: []}, this.getRecepiptList);
+    // };
 
-        let result = [];
+    // getRecepiptList = async () => {
+    //     const {web3, accounts, contract} = this.state;
+    //     const lowerLimit = 50;
 
-        let blockNumber = await web3.eth.getBlockNumber();
-        console.log("Block Number" + blockNumber);
+    //     let result = [];
 
-        let upperBlockNumber = blockNumber;
-        let lowerBlockNumber = (parseInt(upperBlockNumber, 10)-lowerLimit < 0) ? 0 : upperBlockNumber-lowerLimit;
+    //     let blockNumber = await web3.eth.getBlockNumber();
+    //     console.log("Block Number" + blockNumber);
+
+    //     let upperBlockNumber = blockNumber;
+    //     let lowerBlockNumber = (parseInt(upperBlockNumber, 10)-lowerLimit < 0) ? 0 : upperBlockNumber-lowerLimit;
         
-        for(let i=upperBlockNumber; i>lowerBlockNumber; i--) {
-            let block = await web3.eth.getBlock(i, false);
-            if(block.transactions.length > 0) {
-                block.transactions.forEach(async function(txHash) {
-                    let tx = await web3.eth.getTransaction(txHash.toString());
-                    if(tx != null && tx.from === accounts[0] && tx.to.toLowerCase() === contract.address.toLowerCase()) {
-                        await web3.eth.getTransactionReceipt(tx.hash, function(e, r) {
-                            if(r.logs.length === 2) {
-                                result.push({"txhash": r.transactionHash,
-                                    "value": web3.utils.fromWei(web3.utils.toBN(r.logs[1].data).toStirng(), "ether")});
-                            } else if(r.logs.length === 1) {
-                                result.push({"txhash": r.transactionHash, "value": 0});
-                            }
-                        })
-                    }
-                })
-            }
-        }
-        this.setState({txList: result.splice(0, 5)});
-    };
+    //     for(let i=upperBlockNumber; i>lowerBlockNumber; i--) {
+    //         let block = await web3.eth.getBlock(i, false);
+    //         if(block.transactions.length > 0) {
+    //             block.transactions.forEach(async function(txHash) {
+    //                 let tx = await web3.eth.getTransaction(txHash.toString());
+    //                 if(tx != null && tx.from === accounts[0] && tx.to.toLowerCase() === contract.address.toLowerCase()) {
+    //                     await web3.eth.getTransactionReceipt(tx.hash, function(e, r) {
+    //                         if(r.logs.length === 2) {
+    //                             result.push({"txhash": r.transactionHash,
+    //                                 "value": web3.utils.fromWei(web3.utils.toBN(r.logs[1].data).toStirng(), "ether")});
+    //                         } else if(r.logs.length === 1) {
+    //                             result.push({"txhash": r.transactionHash, "value": 0});
+    //                         }
+    //                     })
+    //                 }
+    //             })
+    //         }
+    //     }
+    //     this.setState({txList: result.splice(0, 5)});
+    // };
 
     render() {
         let coin_h = "/images/coin-h.png";
@@ -194,7 +208,7 @@ class CoinFlip extends Component {
                         <Panel bsStyle="info">
                             <Panel.Heading>
                                 <Panel.Title>
-                                    <Glyphicon glyph="thumbs-up"/> House: {this.state.houseEther} ETH <br/> Adress: {this.state.contractAddress}
+                                    <Glyphicon glyph="thumbs-up"/> House: {this.state.houseBalance} ETH <br/> Adress: {this.state.contractAddress}
                                 </Panel.Title>
                             </Panel.Heading>
                             <Panel.Body className="custom-align-center">
@@ -217,7 +231,8 @@ class CoinFlip extends Component {
                             <Panel.Body className="custom-align-center">
                                 <form>
                                     지갑 주소 : {this.state.accounts} <br/>
-                                    잔액 : {this.state.balance} ETH
+                                    잔액 : {this.state.balance} ETH <br/>
+									{this.state.show.msg}
                                     <InputGroup style={{paddingBottom: '10px'}}>
                                         <Radio name="coinRadioGroup" checked={this.state.checked === 2} inline disabled>
                                             Heads
@@ -286,14 +301,14 @@ function Reveal(props) {
 }
 
 function TxList(props) {
-    let result = props.result;
-    let txList = result.map(
-        e => (<ListGroupItem key={e.txhash} bsStyle={e.value>0?"success":"danger"}>{e.txhash} (<b>{e.value}</b> ETH)</ListGroupItem>)
-    );
+    // let result = props.result;
+    // let txList = result.map(
+    //     e => (<ListGroupItem key={e.txhash} bsStyle={e.value>0?"success":"danger"}>{e.txhash} (<b>{e.value}</b> ETH)</ListGroupItem>)
+    // );
 
     return(
         <ListGroup>
-            {txList}
+            {this.state.txList}
         </ListGroup>
     );
 }
