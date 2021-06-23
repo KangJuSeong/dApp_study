@@ -47,7 +47,7 @@ class CoinFlip extends Component {
             await web3.eth.getBalance(String(accounts[0])).then((balance) => {
                 this.setState({balance: balance * 0.000000000000000001});
             });
-            await web3.eth.getBalance(String(instance.address)).then((balance) => {
+            await instance.getHouseFund().then((balance) => {
                 this.setState({houseBalance: balance * 0.000000000000000001})
             })
             this.setState({contractAddress: instance.address});
