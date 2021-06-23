@@ -1,4 +1,5 @@
 import React, {Component} from "react";
+import {Text} from "react";
 import {Grid, Row, Col, Panel, Image, Glyphicon} from "react-bootstrap";
 import {Button, ButtonGroup, ButtonToolbar} from "react-bootstrap";
 import {InputGroup, FormControl, Radio, ListGroup, ListGroupItem} from "react-bootstrap";
@@ -23,10 +24,13 @@ class CoinFlip extends Component {
             show: false,     // 경고 메시지 출력용
             reveal: 0,       // 동전의 앞 또는 뒤
             reward: 0,       // 보상
-            txList: []
+            txList: [],
+            balance: 0,
         }
         this.handleClickCoin = this.handleClickCoin.bind(this);
         this.handleClickBet = this.handleClickBet.bind(this);
+        this.handleClickFlip = this.handleClickFlip.bind(this);
+        this.handleClickReset = this.handleClickReset.bind(this);
     }
 
     componentDidMount = async () => {
@@ -41,6 +45,9 @@ class CoinFlip extends Component {
             await instance.Reveal().watch((error, result) => this.watchEvent(error, result));
             await instance.Payment().watch((error, result) => this.watchPaymentEvent(error, result));
             this.setState({web3, accounts, contract: instance});
+            await web3.eth.getBalance(String(accounts)).then((balance) => {
+                this.setState({balance: balance * 0.000000000000000001});
+            });
         } catch (error) {
             alert("Failed to load web3, accounts, or contract. Check console for details.");
             console.log(error);
@@ -67,7 +74,7 @@ class CoinFlip extends Component {
             return;
         }
 
-        if(accounts[0] === undefined) {
+        if(accounts === undefined) {
             alert("Please press F5 to connect Dapp");
             return;
         }
@@ -75,9 +82,30 @@ class CoinFlip extends Component {
         if(this.state.value <= 0 || this.state.checked === 0) {
             this.setState({show: true});
         } else {
-            await contract.placeBet(this.state.checked, {from: accounts[0], value: web3.utils.toWei(String(this.state.value), "ether")});
+            await contract.placeBet(this.state.checked, {from: accounts, value: web3.utils.toWei(String(this.state.value), "ether")});
             this.setState({show: false, reveal: 0, reward: 0});
         }
+    }
+
+    async handleClickFlip() {
+        const {accounts, contract} = this.state;
+
+        if(!this.state.web3) {
+            console.log("App is not ready");
+            return;
+        }
+
+        if(accounts === undefined) {
+            alert("Please press F5 to connect Dapp");
+            return;
+        }
+
+        let seed = Math.floor((Math.random() * 255) + 1);
+        await contract.revealResult(seed, {from:accounts});
+    }
+
+    handleClickReset() {
+        return;
     }
 
     render() {
@@ -119,6 +147,8 @@ class CoinFlip extends Component {
                             </Panel.Heading>
                             <Panel.Body className="custom-align-center">
                                 <form>
+                                    지갑 주소 : {this.state.accounts} <br/>
+                                    잔액 : {this.state.balance} ETH
                                     <InputGroup style={{paddingBottom: '10px'}}>
                                         <Radio name="coinRadioGroup" checked={this.state.checked === 2} inline disabled>
                                             Heads
