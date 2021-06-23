@@ -156,25 +156,26 @@ class CoinFlip extends Component {
         let upperBlockNumber = blockNumber;
         let lowerBlockNumber = (parseInt(upperBlockNumber, 10)-lowerLimit < 0) ? 0 : upperBlockNumber-lowerLimit;
         
-        for(let i=upperBlockNumber; i>lowerBlockNumber; i--) {
-            let block = await web3.eth.getBlock(i, false);
-            if(block.transactions.length > 0) {
-                block.transactions.forEach(async function(txHash) {
-                    let tx = await web3.eth.getTransaction(txHash.toString());
-                    if(tx != null && tx.from === accounts[0] && tx.to.toLowerCase() === contract.address.toLowerCase()) {
-                        await web3.eth.getTransactionReceipt(tx.hash, function(e, r) {
-                            if(r.logs.length === 2) {
-                                result.push({"txhash": r.transactionHash,
-                                    "value": web3.utils.fromWei(web3.utils.toBN(r.logs[1].data).toStirng(), "ether")});
-                            } else if(r.logs.length === 1) {
-                                result.push({"txhash": r.transactionHash, "value": 0});
-                            }
-                        })
-                    }
-                })
-            }
-        }
-        this.setState({txList: result.splice(0, 5)});
+        // for(let i=upperBlockNumber; i>lowerBlockNumber; i--) {
+        //     let block = await web3.eth.getBlock(i, false);
+        //     if(block.transactions.length > 0) {
+        //         block.transactions.forEach(async function(txHash) {
+        //             let tx = await web3.eth.getTransaction(txHash.toString());
+        //             if(tx != null && tx.from === accounts[0] && tx.to.toLowerCase() === contract.address.toLowerCase()) {
+        //                 await web3.eth.getTransactionReceipt(tx.hash, function(e, r) {
+        //                     if(r.logs.length === 2) {
+        //                         result.push({"txhash": r.transactionHash,
+        //                             "value": web3.utils.fromWei(web3.utils.toBN(r.logs[1].data).toStirng(), "ether")});
+        //                     } else if(r.logs.length === 1) {
+        //                         result.push({"txhash": r.transactionHash, "value": 0});
+        //                     }
+        //                 })
+        //             }
+        //         })
+        //     }
+        // }
+        // this.setState({txList: result.splice(0, 5)});
+        this.setState({txList: []});
     };
 
     render() {
@@ -252,7 +253,7 @@ class CoinFlip extends Component {
                         </Panel>
                     </Col>
                     <Col md={5}>
-                        <TxList result={this.state.txList}/>
+                        {/* <TxList result={this.state.txList}/> */}
                     </Col>
                 </Row>
             </Grid>
