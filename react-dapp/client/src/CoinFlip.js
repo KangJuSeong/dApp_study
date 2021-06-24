@@ -41,13 +41,13 @@ class CoinFlip extends Component {
             // 컨트랙트에서 발생하는 이벤트를 watch를 통해 계속 확인
             await instance.Reveal().watch((error, result) => this.watchEvent(error, result));
             await instance.Payment().watch((error, result) => this.watchPaymentEvent(error, result));
-			await instance.CheckHouseFund().watch((error, result) => this.watchHouseFundEvent(error, result));
+			// await instance.CheckHouseFund().watch((error, result) => this.watchHouseFundEvent(error, result));
 			
             this.setState({web3, accounts, contract: instance});
             await web3.eth.getBalance(String(accounts[0])).then((balance) => {
                 this.setState({balance: balance * 0.000000000000000001});
             });
-            await instance.getHouseFund().then((balance) => {
+            await instance.checkHouseFund().then((balance) => {
                 this.setState({houseBalance: balance * 0.000000000000000001})
             })
             this.setState({contractAddress: instance.address});
@@ -86,7 +86,7 @@ class CoinFlip extends Component {
             	this.setState({show: {flag: true, msg: "You should bet bigger than 0.01 ETH"}});
         	} else {
             	await contract.placeBet(this.state.checked, {from: accounts[0], value: web3.utils.toWei(String(this.state.value), "ether")});
-            	this.setState({show: {flag: false, msg: ""}, reveal: 0, reward: 0});
+            	this.setState({show: {flag: false, msg: ""}, reveal: 0, reward: 0, value: 0});
 				alert("베팅이 완료되었습니다. 이제 동전을 던져주세요!")
         	}	
 		} catch (error) {
@@ -145,14 +145,15 @@ class CoinFlip extends Component {
         }
     };
 
-	watchHouseFund = (error, result) => {
-		if(!error) {
-			const {web3} = this.state;
-			this.setState({houseBalance: result.args.balance});
-		} else {
-			console.log(error);
-		}
-	}
+	// watchHouseFundEvent = (error, result) => {
+	// 	if(!error) {
+	// 		const {web3} = this.state;
+    //         let balance = web3.eth.getBalance(this.state.contractAddress);
+	// 		this.setState({houseBalance: balance * 10});
+	// 	} else {
+	// 		console.log(error);
+	// 	}
+	// }
 
     // resetTxList = () => {
     //     this.setState({txList: []}, this.getRecepiptList);
@@ -305,10 +306,11 @@ function TxList(props) {
     // let txList = result.map(
     //     e => (<ListGroupItem key={e.txhash} bsStyle={e.value>0?"success":"danger"}>{e.txhash} (<b>{e.value}</b> ETH)</ListGroupItem>)
     // );
+    let txList = [];
 
     return(
         <ListGroup>
-            {this.state.txList}
+            {txList}
         </ListGroup>
     );
 }
