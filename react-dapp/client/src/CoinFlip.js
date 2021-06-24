@@ -140,7 +140,6 @@ class CoinFlip extends Component {
             let r = web3.utils.fromWei(web3.utils.toBN(result.args.amount).toString(), 'ether');
             if(r > 0) {
                 this.setState({reward: r});
-				alert("성공! 보상금을 확인하세요");
             }
         }
     };

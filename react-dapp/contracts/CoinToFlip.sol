@@ -51,8 +51,6 @@ contract CoinToFlip {
 		// address(this).balance 는 컨트랙트가 가진 잔액
 		require(withdrawAmount + lockedInBets <= address(this).balance, "Large than balance"); 
 		sendFunds(beneficiary, withdrawAmount);
-		uint last_balance = address(this).balance - withdrawAmount;
-		emit CheckHouseFund(last_balance);
 	}
 	
 	// 이더 전송 메서드, 플레이어에게 상금 전송 또는 이더 인출 역할
@@ -182,7 +180,7 @@ contract CoinToFlip {
 	function clearBet(address player) private {
 		Bet storage bet = bets[player];
 		
-		if(bet.amount > 0) {
+		if(bet.amount < 0) {
 			return;
 		}
 		
@@ -218,7 +216,6 @@ contract CoinToFlip {
 	// 컨트랙트 잔액을 조회하는 메서드
 	function checkHouseFund() public view onlyOwner returns(uint) {
 		uint balance = address(this).balance;
-		emit CheckHouseFund(balance);
 		return balance;
 	}
 	
