@@ -33,6 +33,7 @@ contract CoinToFlip {
 	event Reveal(uint reveal);                                     // 던진 동전의 결과 이벤트 (1 or 2)
 	event Payment(address indexed beneficiary, uint amount);        // 상금 전송 이벤트 
 	event FailedPayment(address indexed beneficiary, uint amount);  // 상금 전송 실패 이벤트
+	event CheckHouseFund(uint balance);
 	
 	// 생성자, owner를 컨트랙트 배포 주소로 저장
 	constructor() public {
@@ -50,6 +51,8 @@ contract CoinToFlip {
 		// address(this).balance 는 컨트랙트가 가진 잔액
 		require(withdrawAmount + lockedInBets <= address(this).balance, "Large than balance"); 
 		sendFunds(beneficiary, withdrawAmount);
+		uint last_balance = address(this).balance - withdrawAmount;
+		emit CheckHouseFund(last_balance);
 	}
 	
 	// 이더 전송 메서드, 플레이어에게 상금 전송 또는 이더 인출 역할
@@ -165,6 +168,8 @@ contract CoinToFlip {
 		// 정답을 맞춘 유저에게 최종 보상금 전송
 		if(winningAmount > 0) {
 			sendFunds(gambler, winningAmount);
+			uint balance = address(this).balance;
+			emit CheckHouseFund(balance);
 		}
 		
 		// 모든 보상금이 다 나갔으므로 잠겨있는 이더 빼주기
@@ -195,11 +200,13 @@ contract CoinToFlip {
 		Bet storage bet = bets[msg.sender];
 		uint amount = bet.amount;
 		
-		require(amount < 0, "Bet should be in an 'active' state");
+		require(amount > 0, "Bet should be in an 'active' state");
 		
 		uint8 numOfBetBit = bet.numOfBetBit;
 		
 		sendFunds(bet.gambler, amount);
+		uint balance = address(this).balance;
+		emit CheckHouseFund(balance);
 		
 		uint possibleWinningAmount;
 		possibleWinningAmount = getWinningAmount(amount, numOfBetBit);
@@ -210,7 +217,9 @@ contract CoinToFlip {
 	
 	// 컨트랙트 잔액을 조회하는 메서드
 	function checkHouseFund() public view onlyOwner returns(uint) {
-		return address(this).balance;
+		uint balance = address(this).balance;
+		emit CheckHouseFund(balance);
+		return balance;
 	}
 	
 	// numOfBetBit 계산 메서드
